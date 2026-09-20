@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0"
+          name="iot-feature-1.0.4">
+
+    <!-- ─── Karaf bootstrap — installed at start-up before anything else ──────── -->
+
+    <feature name="feature-installer" version="1.0.0"
+             description="Panther - IoT - Feature - Installer" install="auto">
+        <bundle start-level="10">mvn:com.iot/feature-installer/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Third-party runtime dependencies ───────────────────────────────────── -->
+
+    <feature name="panther-third-party" version="1.0.0"
+             description="Panther - External Dependencies">
+        <!-- Modbus / serial -->
+        <bundle start-level="20">wrap:mvn:net.wimpi/jamod/1.2$Bundle-SymbolicName=net.wimpi.jamod&amp;Bundle-Version=1.2</bundle>
+        <bundle start-level="20">wrap:mvn:org.rxtx/rxtx/2.1.7$Bundle-SymbolicName=org.rxtx&amp;Bundle-Version=2.1.7</bundle>
+        <!-- YAML -->
+        <bundle start-level="20">mvn:org.yaml/snakeyaml/2.2</bundle>
+        <!-- Jackson (used by schema store and logging sink) -->
+        <bundle start-level="20">mvn:com.fasterxml.jackson.core/jackson-core/2.16.1</bundle>
+        <bundle start-level="20">mvn:com.fasterxml.jackson.core/jackson-annotations/2.16.1</bundle>
+        <bundle start-level="20">mvn:com.fasterxml.jackson.core/jackson-databind/2.16.1</bundle>
+    </feature>
+
+    <!-- ─── Core API — must be first; everything else depends on it ─────────────── -->
+
+    <feature name="panther-lifecycle-api" version="1.0.0"
+             description="Panther - Shared Sensor/Connector Lifecycle API">
+        <bundle start-level="40">mvn:com.panther/sensor-lifecycle-api/1.0.4</bundle>
+    </feature>
+
+    <feature name="panther-sensor-api" version="1.0.0"
+             description="Panther - Sensor API">
+        <feature version="1.0.0">panther-lifecycle-api</feature>
+        <bundle start-level="40">mvn:com.panther/sensor-connector-api/1.0.4</bundle>
+    </feature>
+
+    <feature name="panther-sensor-inventory-api" version="1.0.0"
+             description="Panther - Agent-owned Sensor/Connector Inventory API">
+        <feature version="1.0.0">panther-lifecycle-api</feature>
+        <bundle start-level="40">mvn:com.panther/sensor-inventory-api/1.0.4</bundle>
+    </feature>
+
+    <feature name="panther-sensor-inventory" version="1.0.0"
+             description="Panther - Agent-owned Sensor/Connector Inventory (impl)">
+        <feature version="1.0.0">panther-sensor-inventory-api</feature>
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="45">mvn:com.panther/sensor-inventory/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Configuration provider — reads Configuration.yaml via FileInstall ──── -->
+
+    <feature name="panther-config-provider" version="1.0.0"
+             description="Panther - Configuration Provider">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-third-party</feature>
+        <bundle start-level="40">mvn:com.panther/config-provider/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── License guard — startup kill-switch, runs before everything ────────── -->
+
+   <!-- <feature name="panther-license-guard" version="1.0.0"
+             description="IoT - License activation gate (trial kill-switch)">
+        &lt;!&ndash; start-level 8: before sensors/orchestrator (40+) so an invalid
+             license stops the framework before any agent work runs. &ndash;&gt;
+        <bundle start-level="8">mvn:com.panther/license-guard/1.0.0</bundle>
+    </feature>-->
+
+    <!-- ─── Orchestrator — creates sensor stacks from registry ─────────────────── -->
+
+    <feature name="panther-orchestrator" version="1.0.0"
+             description="IoT - Bootstrap Orchestrator">
+        <!-- Pull the license guard so a licensed runtime is always present. -->
+<!--        <feature version="1.0.0">panther-license-guard</feature>-->
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-config-provider</feature>
+        <feature version="1.0.0">panther-sensor-inventory</feature>
+        <bundle start-level="40">mvn:com.iot/iot-orchestrator/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Schema engine — vendor lookup, AI generation, YAML store ──────────── -->
+
+    <feature name="panther-schemas" version="1.0.0"
+             description="Panther - Dynamic Device Schema Engine">
+        <feature version="1.0.0">panther-third-party</feature>
+        <bundle start-level="50">mvn:com.panther/schema-api/1.0.4</bundle>
+        <bundle start-level="50">mvn:com.panther/schema-store/1.0.4</bundle>
+        <bundle start-level="55">mvn:com.panther/schema-vendor/1.0.4</bundle>
+        <bundle start-level="55">mvn:com.panther/schema-resolver/1.0.4</bundle>
+        <bundle start-level="55">mvn:com.panther/schema-ai/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Sensor polling engine ───────────────────────────────────────────────── -->
+
+    <feature name="panther-sensor-poller" version="1.0.0"
+             description="Panther - Sensor Polling Engine">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-sensor-inventory-api</feature>
+        <bundle start-level="55">mvn:com.panther/sensor-poller/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Network device discovery ────────────────────────────────────────────── -->
+
+    <feature name="panther-discovery" version="1.0.0"
+             description="Panther - Automated Device Discovery Engine">
+        <feature version="1.0.0">panther-schemas</feature>
+        <bundle start-level="55">mvn:com.panther/device-discovery/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Modbus connector + sensor ───────────────────────────────────────────── -->
+
+    <feature name="panther-modbus-connector" version="1.0.0"
+             description="Panther - Modbus Connector">
+        <feature version="1.0.0">panther-third-party</feature>
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/modbus-connector/1.0.0</bundle>
+    </feature>
+
+    <feature name="panther-modbus-sensor" version="1.0.0"
+             description="Panther - Modbus Sensor Driver">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-schemas</feature>
+        <feature version="1.0.0">panther-modbus-connector</feature>
+        <bundle start-level="80">mvn:com.panther/modbus-sensor/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── OPC-UA connector + sensor ───────────────────────────────────────────── -->
+
+    <feature name="panther-opcua-connector" version="1.0.0"
+             description="Panther - OPC-UA Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-schemas</feature>
+        <bundle start-level="60">mvn:com.panther/opcua-connector/1.0.0</bundle>
+    </feature>
+
+    <feature name="panther-opcua-sensor" version="1.0.0"
+             description="Panther - OPC-UA Sensor Driver">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-schemas</feature>
+        <feature version="1.0.0">panther-opcua-connector</feature>
+        <bundle start-level="80">mvn:com.panther/opcua-sensor/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── Siemens S7 connector + sensor ───────────────────────────────────────── -->
+
+    <!-- Re-enabled: S7ClientComponent now performs real ISO-TCP reads via the
+         embedded Moka7 client (DB/M/I/Q areas, typed decode). -->
+    <feature name="panther-s7-connector" version="1.0.0"
+             description="Panther - Siemens S7 Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/s7-connector/1.0.0</bundle>
+    </feature>
+
+    <feature name="panther-s7-sensor" version="1.0.0"
+             description="Panther - Siemens S7 Sensor Driver">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-schemas</feature>
+        <feature version="1.0.0">panther-s7-connector</feature>
+        <bundle start-level="80">mvn:com.panther/s7-sensor/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── MTConnect connector (CNC monitoring) ──────────────────────────────────
+        Single-component polling model like HTTP — no separate sensor bundle.
+        Polls MTConnect agents' /current endpoint (Fanuc/Mazak/Okuma/Haas). -->
+    <feature name="panther-mtconnect-connector" version="1.0.0"
+             description="Panther - MTConnect Connector (CNC)">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-schemas</feature>
+        <bundle start-level="60">mvn:com.panther/mtconnect-connector/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── Allen-Bradley connector + sensor ────────────────────────────────────── -->
+
+    <feature name="panther-ab-connector" version="1.0.0"
+             description="Panther - Allen-Bradley Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/ab-connector/1.0.0</bundle>
+    </feature>
+
+    <feature name="panther-ab-sensor" version="1.0.0"
+             description="Panther - Allen-Bradley Sensor Driver">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <feature version="1.0.0">panther-schemas</feature>
+        <feature version="1.0.0">panther-ab-connector</feature>
+        <bundle start-level="80">mvn:com.panther/ab-sensor/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── MQTT connector ───────────────────────────────────────────────────────── -->
+
+    <feature name="panther-mqtt-connector" version="1.0.0"
+             description="Panther - MQTT Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/mqtt-connector/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── Simulated sensor — synthetic telemetry, no hardware/broker needed ────── -->
+
+    <feature name="panther-sim-connector" version="1.0.0"
+             description="Panther - Simulated Sensor Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/sim-connector/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── HTTP/REST connector — polls a JSON endpoint into metrics ─────────────── -->
+
+    <feature name="panther-http-connector" version="1.0.0"
+             description="Panther - HTTP/REST Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/http-connector/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── SNMP connector — polls OIDs from network gear / UPS / PDUs ───────────── -->
+
+    <feature name="panther-snmp-connector" version="1.0.0"
+             description="Panther - SNMP Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/snmp-connector/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── BACnet/IP — building automation (HVAC, energy meters, fire safety) ─── -->
+
+    <feature name="panther-bacnet-connector" version="1.0.0"
+             description="Panther - BACnet/IP Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/bacnet-connector/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── Mitsubishi MELSEC MC-Protocol ─────────────────────────────────────── -->
+
+    <feature name="panther-melsec-connector" version="1.0.0"
+             description="Panther - Mitsubishi MELSEC MC-Protocol Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/melsec-connector/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── DNP3 over TCP/IP — electric utilities, water, oil &amp; gas SCADA ── -->
+
+    <feature name="panther-dnp3-connector" version="1.0.0"
+             description="Panther - DNP3 Connector">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="60">mvn:com.panther/dnp3-connector/1.0.0</bundle>
+    </feature>
+
+    <feature name="panther-host-agent" version="1.0.0"
+             description="Panther - Host Infrastructure Agent (process topology &amp; device connections)">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-core/2.16.1</bundle>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-annotations/2.16.1</bundle>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-databind/2.16.1</bundle>
+        <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.16.1</bundle>
+        <bundle start-level="80">mvn:com.panther/host-sensor/1.0.0</bundle>
+    </feature>
+
+    <!-- ─── Platform bridge — publishes every SensorSample to the backend's bus ──── -->
+
+    <feature name="panther-platform-bridge" version="1.0.0"
+             description="Panther - Platform Bridge (NATS publisher)">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle>wrap:mvn:io.nats/jnats/2.17.5</bundle>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-core/2.16.1</bundle>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-annotations/2.16.1</bundle>
+        <bundle>mvn:com.fasterxml.jackson.core/jackson-databind/2.16.1</bundle>
+        <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.16.1</bundle>
+        <bundle start-level="80">mvn:com.panther/platform-bridge/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Metrics — Prometheus /metrics endpoint (optional backend) ─────────────
+        Implements the com.panther.metrics.MetricsService facade; sensor-poller
+        and platform-bridge bind it OPTIONAL/DYNAMIC and no-op when absent, so
+        this feature can be excluded on constrained gateways. Micrometer is
+        embedded inside the bundle. Level 30: before producers bind (40+). -->
+    <feature name="panther-metrics" version="1.0.0"
+             description="Panther - Prometheus Metrics Endpoint (:9464/metrics)">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="30">mvn:com.panther/metrics-prometheus/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Gateway value cache + offline local status UI ─────────────────────
+        gateway-cache registers a TelemetrySink (whiteboard) keeping the last
+        sample per device; gateway-ui serves it on :8090 — both keep working
+        with the backend link down. Cache at level 30 so it's bound before the
+        poller starts fanning out (40+). -->
+    <feature name="panther-gateway-cache" version="1.0.0"
+             description="Panther - Last-Known-Value Cache">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="30">mvn:com.panther/gateway-cache/1.0.4</bundle>
+    </feature>
+
+    <feature name="panther-gateway-ui" version="1.0.0"
+             description="Panther - Local Status UI (:8090)">
+        <feature version="1.0.0">panther-gateway-cache</feature>
+        <bundle start-level="85">mvn:com.panther/gateway-ui/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── OPC UA server — re-serve collected values southbound ──────────────
+        Opt-in twice: install this feature AND set enabled=true under the
+        com.panther.opcua.server PID. Read-only address space on :4841,
+        values from gateway-cache. Makes Panther additive to existing
+        MES/SCADA — any OPC UA client can browse what the gateway collects. -->
+    <feature name="panther-opcua-server" version="1.0.0"
+             description="Panther - OPC UA Server (:4841, opt-in)">
+        <feature version="1.0.0">panther-gateway-cache</feature>
+        <bundle start-level="85">mvn:com.panther/opcua-server/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Command executor — consumes commands.write.>, routes to translators ───── -->
+    <!--
+        Two bundles:
+          command-api      — types + SPI (CommandTranslator), exported for translators.
+          command-executor — NATS consumer + router + Modbus translator + stubs.
+
+        Runtime deps (jnats, Jackson, jamod) are embedded inside command-executor's
+        bundle JAR via the maven-bundle-plugin Embed-Dependency directive, so no
+        extra feature install is required here.
+    -->
+    <feature name="panther-command-executor" version="1.0.0"
+             description="Panther - Command Executor (setpoint write-back)">
+        <feature version="1.0.0">panther-sensor-api</feature>
+        <bundle start-level="80">mvn:com.panther/command-api/1.0.4</bundle>
+        <bundle start-level="85">mvn:com.panther/command-executor/1.0.4</bundle>
+    </feature>
+
+    <!-- ─── Gateway config-receiver — applies pushed Configuration.yaml updates ─── -->
+    <!--
+        Runtime deps (jnats, SnakeYAML) are inlined inside the bundle JAR via
+        Embed-Dependency, so no separate Karaf feature install is required.
+    -->
+    <feature name="panther-config-receiver" version="1.0.0"
+             description="Panther - Configuration push receiver">
+        <bundle start-level="85">mvn:com.panther/config-receiver/1.0.4</bundle>
+    </feature>
+
+</features>
